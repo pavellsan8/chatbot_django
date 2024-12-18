@@ -25,7 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     "Content-Type": "application/json",
                     "X-CSRFToken": getCookie('csrftoken')
                 },
-                body: JSON.stringify({ text: userMessage })
+                body: JSON.stringify(
+                    { 
+                        text: userMessage 
+                    }
+                )
             });
 
             if (!response.ok) {
@@ -38,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 addMessage(botMessage, "bot");
             }, 500);
+            
         } catch (error) {
             console.error("Error:", error);
             addMessage("Sorry, something went wrong. Please try again later.", "bot");

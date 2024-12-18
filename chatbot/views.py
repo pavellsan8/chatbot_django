@@ -14,21 +14,22 @@ sentiment_generator = SentimentResponseGenerator()
 @require_POST
 def sentiment_analysis(request):
     try:
-        # Parse input JSON
         data = json.loads(request.body)
         text = data.get('text', '')
         
         if not text:
-            return JsonResponse({
-                'error': 'No text provided'
-            }, status=400)
+            return JsonResponse(
+                {
+                    'error': 'No text provided'
+                }, status=400
+            )
         
-        # Proses sentiment
         result = sentiment_generator.process(text)
-        
         return JsonResponse(result)
     
     except Exception as e:
-        return JsonResponse({
-            'error': str(e)
-        }, status=500)
+        return JsonResponse(
+            {
+                'error': str(e)
+            }, status=500
+        )

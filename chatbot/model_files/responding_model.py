@@ -21,6 +21,7 @@ class RoBERTa_GRU(torch.nn.Module):
             attention_mask=attention_mask, 
             token_type_ids=token_type_ids
         )
+
         cls = roberta_output.last_hidden_state[:, 0]
         sequences, _ = self.gru(cls.unsqueeze(0))
         flattened = self.flatten(sequences)
@@ -28,6 +29,7 @@ class RoBERTa_GRU(torch.nn.Module):
         x = self.gelu(x)
         x = self.dense_2(x)
         output = torch.nn.functional.softmax(x, dim=1)
+
         return output
 
 class SentimentResponseGenerator:
@@ -120,7 +122,7 @@ class SentimentResponseGenerator:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Using a standard model instead of fine-tuned
+                model="gpt-3.5-turbo",
                 messages=[
                     {
                         "role": "system", 
@@ -160,6 +162,7 @@ class SentimentResponseGenerator:
                 "sentiment_description": sentiment_descriptions[sentiment],
                 "response": response
             }
+        
         except Exception as e:
             print(f"Error in process: {e}")
             return {
@@ -169,5 +172,4 @@ class SentimentResponseGenerator:
                 "response": "I apologize, but I'm having trouble processing your message right now. Please try again."
             }
 
-# Initialize the generator only once
 sentiment_generator = SentimentResponseGenerator()
