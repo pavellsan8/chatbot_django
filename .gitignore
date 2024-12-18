@@ -1,0 +1,41 @@
+# Environment variables
+.env
+
+# Django settings
+settings.py
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch model files (specific)
+chatbot/model_files/RoBERTa_GRU_model.pth
+model_files/RoBERTa_GRU_model.pth
+RoBERTa_GRU_model.pth
+*.pth
+
+# Django local settings
+local_settings.py
+
+# Database
+*.sqlite3
+db.sqlite3
+
+# Static files
+/static/
+/media/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Log files
+*.log
