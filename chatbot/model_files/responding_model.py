@@ -56,7 +56,7 @@ class SentimentResponseGenerator:
         except Exception as e:
             print(f"Error initializing OpenAI client: {e}")
             self.client = None
-    
+
     def load_sentiment_model(self, path: str):
         try:
             model = RoBERTa_GRU()

@@ -18,6 +18,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         addMessage(userMessage, "user");
 
+        if(userMessage == "Lorem Ipsum") {
+            addMessage("Lorem Ipsum", "bot");
+            return;
+        }
+
         try {
             const response = await fetch("/sentiment/", {
                 method: "POST",
