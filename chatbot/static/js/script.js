@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const data = await response.json();
-            const botMessage = `${data.sentiment_description}: ${data.response}`;
+            const botMessage = `${data.response}`;
 
             setTimeout(() => {
                 addMessage(botMessage, "bot");

@@ -240,6 +240,7 @@ if __name__ == "__main__":
             settings.BASE_DIR, 
             'chatbot',
             'model_files',
+            'distilbert_cnn',
             'distilbert_cnn_model.pth'
         )
     

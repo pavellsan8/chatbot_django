@@ -39,6 +39,7 @@ class SentimentResponseGenerator:
                 settings.BASE_DIR, 
                 'chatbot',
                 'model_files',
+                'roberta_gru',
                 'RoBERTa_GRU_model.pth'
             )
         
