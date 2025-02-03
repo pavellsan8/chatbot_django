@@ -89,13 +89,9 @@ class ModelGPTIntegrator:
         
         # Set up sentiment mapping
         self.sentiment_map = sentiment_map or {
-            0: "very negative",
-            1: "moderately negative",
-            2: "slightly negative",
-            3: "neutral or mixed emotion",
-            4: "slightly positive",
-            5: "moderately positive",
-            6: "very positive"
+            0: "negative",
+            1: "neutral or mixed emotion",
+            2: "positive"
         }
         
         # Validate sentiment map
@@ -171,19 +167,19 @@ class ModelGPTIntegrator:
         
         Based on this text and sentiment analysis, please provide:
         1. A brief confirmation or correction of the sentiment
-        2. An empathetic, natural response that acknowledges the person's emotions and encourages further dialogue
+        2. A response with the same sentiment as the user and encourages further dialogue
         
         Format your response exactly like this example:
         sentiment: neutral or mixed emotion
         response: I notice you have mixed feelings about this situation. Would you like to talk more about what's on your mind?
         
-        Your response should be genuine, supportive, and conversation-continuing. Make sure to maintain this exact format with the "sentiment:" and "response:" labels.
+        Your response should have the same sentiment as the user. Make sure to maintain this exact format with the "sentiment:" and "response:" labels.
         """
         
         response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an empathetic conversation partner who provides supportive responses while accurately assessing emotional content."},
+                {"role": "system", "content": "You are a conversation partner that will analyze the sentiment of the user and respond according to the sentiment. If it is negative, reply negatively. If it is positive, reply positively."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
@@ -216,7 +212,7 @@ class ModelGPTIntegrator:
         
         return {
             'input_text': text,
-            'sentiment': sentiment_value-3,
+            'sentiment': sentiment_value,
             'sentiment_description': gpt_analysis['sentiment_description'],
             'response': gpt_analysis['response']
         }
@@ -226,14 +222,10 @@ if __name__ == "__main__":
     # Define custom sentiment mapping
     custom_sentiment_map = {
         0: "very negative",
-        1: "moderately negative",
-        2: "slightly negative",
-        3: "neutral or mixed emotion",
-        4: "slightly positive",
-        5: "moderately positive",
-        6: "very positive"
+        1: "neutral or mixed emotion",
+        2: "very positive"
     }
-
+    
     model_path = ''
     if model_path is None:
         model_path = os.path.join(
@@ -247,6 +239,6 @@ if __name__ == "__main__":
     # Initialize integrator
     integrator = ModelGPTIntegrator(
         model_path=model_path,
-        num_classes=7,
+        num_classes=3,
         sentiment_map=custom_sentiment_map
     )
