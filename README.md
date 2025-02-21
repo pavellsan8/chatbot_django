@@ -24,6 +24,6 @@ python -m venv venv -> cd chatbot_app
 Ketiga, jalankan perintah berikut untuk menginstall seluruh depedencies:
 pip install -r requirements.txt
 
-### 4. **Clone Repository**
+### 4. **Run Server**
 Keempat, run aplikasi dengan command:
 python manage.py runserver
