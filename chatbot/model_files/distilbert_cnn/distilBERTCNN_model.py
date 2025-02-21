@@ -12,44 +12,42 @@ import torch
 from torch import nn
 from transformers import DistilBertModel
 
-class DistilBERT_CNN(torch.nn.Module):
-    def __init__(self, num_classes, dropout_rate=0.2):
+class DistilBERT_CNN(nn.Module):
+    def __init__(self, num_classes, embedding_dropout=0.5, classifier_dropout=0.1):
         super(DistilBERT_CNN, self).__init__()
         self.bert = DistilBertModel.from_pretrained('distilbert-base-uncased')
-        
-        # Freeze some of the early BERT layers to prevent overfitting
-        for param in self.bert.transformer.layer[:2].parameters():
+
+        self.embedding_dropout = nn.Dropout(embedding_dropout)
+
+        for param in self.bert.transformer.layer[:4].parameters():
             param.requires_grad = False
-            
-        # Multiple conv layers with different kernel sizes
+
+
         self.convs = nn.ModuleList([
-            nn.Conv2d(1, 32, (k, 768), padding=(k//2, 0)) 
+            nn.Conv2d(1, 32, (k, 768), padding=(k//2, 0))
             for k in [3, 4, 5]
         ])
-        
-        self.layer_norm = nn.LayerNorm(32 * 3)
-        self.dropout = nn.Dropout(dropout_rate)
-        
+
+        self.layer_norm = nn.LayerNorm(32 * 3) 
+
+        self.classifier_dropout = nn.Dropout(classifier_dropout)
+
         self.bns = nn.ModuleList([
             nn.BatchNorm2d(32) for _ in range(3)
         ])
-        
+
         self.relu = nn.ReLU()
-        self.pool = nn.AdaptiveMaxPool2d((1, 1))
+        self.pool = nn.AdaptiveMaxPool2d((1, 1)) 
         self.flat = nn.Flatten()
-        
-        # Initialize fc layer here with the expected size
-        # 32 * 3 because we have 3 conv layers with 32 filters each
         self.fc = nn.Linear(32 * 3, num_classes)
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, sent_id, mask):
-        # Get BERT outputs
+        # Get BERT outputs with gradient checkpointing for memory efficiency
         self.bert.gradient_checkpointing_enable()
         outputs = self.bert(input_ids=sent_id, attention_mask=mask, return_dict=False)
-        x = outputs[0].unsqueeze(1)
 
-        # Apply multiple convolutions in parallel
+        x = self.embedding_dropout(outputs[0]).unsqueeze(1)
+
         conv_outputs = []
         for conv, bn in zip(self.convs, self.bns):
             conv_x = conv(x)
@@ -57,18 +55,14 @@ class DistilBERT_CNN(torch.nn.Module):
             conv_x = self.relu(conv_x)
             conv_x = self.pool(conv_x)
             conv_outputs.append(conv_x)
-        
-        # Concatenate conv outputs
+
         x = torch.cat(conv_outputs, dim=1)
-        x = self.flat(x)
-        
-        # Apply layer normalization and dropout
-        x = self.layer_norm(x)
-        x = self.dropout(x)
-        
-        # Use the pre-initialized fc layer
-        x = self.fc(x)
-        return self.softmax(x)
+        x = self.flat(x)  
+
+        self.fc = self.fc.to(x.device)
+
+        x = self.classifier_dropout(x)
+        return self.fc(x)
 
 class ModelGPTIntegrator:
     def __init__(
@@ -77,28 +71,18 @@ class ModelGPTIntegrator:
         num_classes: int,
         sentiment_map: Optional[Dict[int, str]] = None
     ):
-
-        # Set up OpenAI API key from Kaggle secrets
-        # user_secrets = UserSecretsClient()
-        # openai_key = user_secrets.get_secret("OpenAI API Key")
-        
-        # Initialize OpenAI client with the key from Kaggle secrets
-        # if openai_api_key is None:
         openai_api_key = settings.OPENAI_API_KEY
         self.client = OpenAI(api_key=openai_api_key)
         
-        # Set up sentiment mapping
         self.sentiment_map = sentiment_map or {
             0: "negative",
             1: "neutral or mixed emotion",
             2: "positive"
         }
         
-        # Validate sentiment map
         if len(self.sentiment_map) != num_classes:
             raise ValueError(f"Sentiment map length must match number of classes ({num_classes})")
         
-        # Load tokenizer and model
         self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self._load_model(model_path, num_classes)
@@ -110,16 +94,15 @@ class ModelGPTIntegrator:
         state_dict = torch.load(model_path, map_location=self.device)
         model.load_state_dict(state_dict)
         return model.to(self.device)
-
+    
     def preprocess_text(self, text: str) -> Dict[str, torch.Tensor]:
-        """Preprocess input text for the DistilBERT model."""
-        encoded = self.tokenizer.encode_plus(
+        encoded = self.tokenizer(
             text,
-            add_special_tokens=True,
-            max_length=512,
+            max_length=36,  
             padding='max_length',
+            pad_to_max_length=True,
             truncation=True,
-            return_attention_mask=True,
+            return_token_type_ids=False,
             return_tensors='pt'
         )
         
@@ -129,8 +112,7 @@ class ModelGPTIntegrator:
         }
 
     def get_model_prediction(self, text: str) -> Dict[str, Dict[str, float]]:
-        """Get prediction probabilities with sentiment labels."""
-        # Preprocess and get prediction
+        # preprocess and get prediction
         inputs = self.preprocess_text(text)
         with torch.no_grad():
             outputs = self.model(
@@ -138,10 +120,10 @@ class ModelGPTIntegrator:
                 mask=inputs['attention_mask']
             )
         
-        # Convert to probabilities
+        # convert to probabilities
         probs = outputs[0].cpu().numpy()
         
-        # Create predictions dictionary
+        # predictions dictionary
         numeric_probs = {f'class_{i}': float(prob) for i, prob in enumerate(probs)}
         sentiment_probs = {self.sentiment_map[i]: float(prob) for i, prob in enumerate(probs)}
         predicted_class = int(np.argmax(probs))
@@ -167,11 +149,8 @@ class ModelGPTIntegrator:
         
         Based on this text and sentiment analysis, please provide:
         1. A brief confirmation or correction of the sentiment
-        2. A response with the same sentiment as the user and encourages further dialogue
-        
-        Format your response exactly like this example:
-        sentiment: neutral or mixed emotion
-        response: I notice you have mixed feelings about this situation. Would you like to talk more about what's on your mind?
+        2. A response with the same sentiment as the user and encourages further dialogue. Remember to be as natural as possible, act like a friend.
+        3. Keep in mind the previous dialogues by the user. Make sure the conversation keeps its context.
         
         Your response should have the same sentiment as the user. Make sure to maintain this exact format with the "sentiment:" and "response:" labels.
         """
@@ -186,10 +165,10 @@ class ModelGPTIntegrator:
             max_tokens=200
         )
         
-        # Parse the response to extract sentiment and response
+        # parse the response to extract sentiment and response
         gpt_response = response.choices[0].message.content.strip()
         
-        # Split the response into lines and parse
+        # split the response into lines and parse
         lines = gpt_response.split('\n')
         sentiment_desc = lines[0].replace('sentiment:', '').strip()
         response_text = lines[1].replace('response:', '').strip()
@@ -217,9 +196,7 @@ class ModelGPTIntegrator:
             'response': gpt_analysis['response']
         }
 
-# Example usage
 if __name__ == "__main__":
-    # Define custom sentiment mapping
     custom_sentiment_map = {
         0: "very negative",
         1: "neutral or mixed emotion",
@@ -236,7 +213,6 @@ if __name__ == "__main__":
             'distilbert_cnn_model.pth'
         )
     
-    # Initialize integrator
     integrator = ModelGPTIntegrator(
         model_path=model_path,
         num_classes=3,

@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from chatbot.model_files.roberta_gru.responding_model import SentimentResponseGenerator
+#from chatbot.model_files.roberta_gru.responding_model import SentimentResponseGenerator
 from chatbot.model_files.distilbert_cnn.distilBERTCNN_model import ModelGPTIntegrator
 # from chatbot.model_files.distilbert.disitlBERT_model import ModelGPTIntegrator
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +13,7 @@ def home(request):
     return render(request, 'chatbot.html')
 
 # Responding Model
-sentiment_generator = SentimentResponseGenerator()
+# sentiment_generator = SentimentResponseGenerator()
 
 # DstilBERT + CNN Model
 model_path = os.path.join(settings.BASE_DIR, 'chatbot', 'model_files', 'distilbert_cnn', 'distilbert_cnn_model.pth')
@@ -46,7 +46,7 @@ def sentiment_analysis(request):
         # RoBERTa_GRU
         # result = sentiment_generator.process(text)
 
-        # distilBERTCNN / distilBERT
+        # distilBERTCNN
         result = sentiment_integrator.analyze_text(text)
         return JsonResponse(result)
     

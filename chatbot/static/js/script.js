@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             setTimeout(() => {
                 addMessage(botMessage, "bot");
-            }, 500);
+            }, 200);
             
         } catch (error) {
             console.error("Error:", error);
